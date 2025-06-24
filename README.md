@@ -27,6 +27,8 @@
   예를 들어 
 5 1 5 2 6 1 6 2 5 11 6 11 7 11 4 12 8 12 3 13 9 13 3 14 9 14 6 15 4 16 8 16 5 17 6 17 7 17
 을 입력하고 Run을 누르면 재미있는 패턴을 볼 수 있습니다.
+![GOLsample](https://github.com/user-attachments/assets/c56fdc19-4835-4f3b-957c-fd010de0d261)
+
 
 ## 코드 설명
 `class Pixel():`, `class Grid():` 출처:<https://github.com/Max-py54/Tkinter-grid>
