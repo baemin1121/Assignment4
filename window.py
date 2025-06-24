@@ -1,19 +1,81 @@
+import tkinter as tk
 from tkinter import *
-from tkinter import ttk
-from tkinter import messagebox
+import random as r
+def rgbtohex(r,g,b):
+    return f'#{r:02x}{g:02x}{b:02x}'
+"""출처:https://web.archive.org/web/20170430000206/http://www.psychocodes.in/rgb-to-hex-conversion-and-hex-to-rgb-conversion-in-python.html"""
+def randomcolor():
+    return rgbtohex(r.randint(1,255),r.randint(1,255),r.randint(1,255))
 
-win = Tk()
+
+win = tk.Tk() #윈도우
 win.geometry("1920x1080")
 win.title("Game of Life")
 win.option_add("*Font","Arial 25")
 win.configure(bg="white")
 
-canvas = Canvas(win,width=1910, height=1200,bg ="black")
-canvas.grid(row=2,column=0,columnspan=3)
 W_SIZE=127
 H_SIZE=58
-CELL_SIZE=15
 
+class Pixel():
+    def __init__(self, canvas, line: int, column: int, width_line: int, width_column: int, colour: str = "black",
+                 outline: str = "black"):
+        self.canvas = canvas
+        self.line = line
+        self.column = column
+        self.width_line = width_line
+        self.width_column = width_column
+        self.colour = colour
+        self.outline = outline
+        self.create() #픽셀 클래스: 자동으로 찍힘
+    def create(self): #점 찍기
+        x1 = self.column * self.width_column
+        y1 = self.line * self.width_line
+        x2 = self.column * self.width_column + self.width_column
+        y2 = self.line * self.width_line + self.width_line
+        self.pixel = self.canvas.create_rectangle(x1, y1, x2, y2, fill=self.colour, outline=self.outline)
+    def delete(self): #지우기
+        self.canvas.delete(self.pixel)
+
+class Grid():
+    """Grid(window, lines:int, columns:int, width:int, height:int, colour:str="white")
+Creates a grid."""
+    def __init__(self, window, lines: int, columns: int, width: int, height: int, colour: str = "white"):
+        self.lines = lines
+        self.columns = columns
+        self.width = width
+        self.width_line = width // columns
+        self.height = height
+        self.width_column = height // lines
+        self.colour = colour
+        self.canvas = tk.Canvas(window, height=self.height, width=self.width, bg=self.colour)
+        self.canvas.grid(row=2,column=0,columnspan=4)
+        self.pixels = []
+    def pixel(self, line: int, column: int, colour: str = "black", outline: str = ""):
+        """Grid.pixel(line:int, column:int, colour:str="black", outline:str="")
+Changes a specific pixel's colour."""
+        if outline == "":
+            outline = colour #외곽선 default
+        if self.pixels != []:
+            for i, px in enumerate(self.pixels): #픽셀 리스트에서 꺼내서
+                if px.line == line and px.column == column:
+                    px.delete() #겹치면 지우고
+                    self.pixels.pop(i)
+                    break
+            if colour != self.colour: # 색 다름
+                self.pixels.append(
+                    Pixel(self.canvas, line, column, self.width_line, self.width_column, colour, outline))
+        else: #픽셀 리스트에 픽셀 존재하면
+            if colour != self.colour:
+                self.pixels.append(
+                    Pixel(self.canvas, line, column, self.width_line, self.width_column, colour, outline))
+    def clear(self): #픽셀들 지우기
+        """Clears the entire grid."""
+        if self.pixels != []:
+            for px in self.pixels:
+                px.delete()
+            self.pixels = []
+"""Pixel() Grid() 출처:https://github.com/Max-py54/Tkinter-grid  (수정해서 사용함) """
 class Points:
     def __init__(self):
         self.pointList= [[False for _ in range(W_SIZE)]for _ in range(H_SIZE)]
@@ -41,7 +103,7 @@ class Points:
                 self.pointList[r][c]=False
         except ValueError:
                 messagebox.showerror("Error","숫자만 입력하세요.")
-    def life(self,m,n):
+    def life(self,m,n): #규칙 적용
         count,mylife=0,self.pointList[m][n]
         for i in range(8):
             nm,nn=m+self.dr[i],n+self.dc[i]
@@ -55,74 +117,53 @@ class Points:
             if count ==3: return True
             return False
 
-    def compute(self):
-        newlist=[[False for _ in range(W_SIZE)] for _ in range(H_SIZE)]
-        for m in range(H_SIZE):
-            for n in range(W_SIZE):
-                newlist[m][n]=self.life(m,n)
-        self.pointList = newlist
+    def compute(self): #덮어씌우기
+        self.pointList = [[self.life(m, n) for n in range(W_SIZE)] for m in range(H_SIZE)]
 
-def draw_grid():
-    for i in range(H_SIZE+1):#수평선
-        canvas.create_line(0,i*CELL_SIZE,W_SIZE*CELL_SIZE,i*CELL_SIZE,fill="lightgray",tags="grid")
-    for i in range(W_SIZE+1):#수직선
-        canvas.create_line(i*CELL_SIZE,0,i*CELL_SIZE,H_SIZE*CELL_SIZE,fill="lightgray",tags="grid")
+running = False #옵션
+delay = tk.IntVar()
+delay.set(200)
+grid_visible=True
+
+griid = Grid(win, H_SIZE,W_SIZE, 1910, 800, "black")
+points=Points()
+
 def draw_points():
-    canvas.delete("dot")
+    griid.clear()
     for r in range(H_SIZE):
         for c in range(W_SIZE):
             if points.pointList[r][c]:
-                x0=c*CELL_SIZE+2
-                y0=r*CELL_SIZE+2
-                x1 = (c + 1) * CELL_SIZE - 2
-                y1 = (r + 1) * CELL_SIZE - 2
-                canvas.create_rectangle(x0, y0, x1, y1, fill="red", tags="dot")
-running = False
-delay = IntVar()
-delay.set(200)
-grid_visible=True
-def toggle_grid():
-    global grid_visible
-    grid_visible = not grid_visible
-    canvas.itemconfigure("grid",state="normal"if grid_visible else "hidden")
-    gridBtn.config(text="Grid:ON"if grid_visible else "Grid:OFF")
-gridBtn = Button(win, text="Grid:ON",command=toggle_grid)
-gridBtn.grid(row=0,column=1)
+                griid.pixel(r,c,colour=randomcolor(),outline=randomcolor()) #점 찍기
+
+def add_points():
+    points.add_list(entry_var.get())
+    draw_points()
+
+def step():
+    points.compute()
+    draw_points() #
+
 def run():
     global running
     if running:
-        points.compute()
-        draw_points()
+        step()
         win.after(delay.get(), run)
 
-speed_scale = Scale(win, from_=50, to=1000,
-                    orient=HORIZONTAL,
-                    variable=delay,
-                    label="간격(ms)",
-                    length=400)
-speed_scale.grid(row=1, column=2)
+speed_scale = tk.Scale(win, from_=50, to=1000,orient=HORIZONTAL,variable=delay,label="간격(ms)", length=400)
+speed_scale.grid(row=1,column=2)
 
+runBtn=tk.Button(win, text="Run")
+runBtn.grid(row=1,column=2)
 def toggle_run():
     global running
     running = not running
     runBtn.config(text="Pause" if running else "Run")
     if running:run()
-runBtn=Button(win,text="Run")
-runBtn.grid(row=0,column=2)
-runBtn.config(command=lambda: toggle_run())
+runBtn.config(command=toggle_run)
 
-points= Points()
-pointStr = StringVar()
-textbox = ttk.Entry(win, width = 20,textvariable=pointStr)
-textbox.configure()
-textbox.grid(column=0,row=0)
+entry_var=tk.StringVar()
+entry=tk.Entry(win,textvariable=entry_var,font=("Arial",14),width=50).grid(row=0,column=2,columnspan=2)
 
-addBtn=Button(win, text="Add")
-addBtn.grid(row=1,column=0)
-addBtn.config(command=lambda: points.add_list(string=pointStr.get()))
-delBtn=Button(win,text="Del")
-delBtn.grid(column=1,row=1)
-delBtn.config(command=lambda: points.del_list(string=pointStr.get()))
+tk.Button(win, text="Add", command=add_points).grid(row=1, column=0)
 
-draw_grid()
 win.mainloop()
